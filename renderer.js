@@ -11,6 +11,9 @@ const toolbarOpacityModal = document.getElementById('toolbar-opacity-modal');
 const toolbarOpacitySlider = document.getElementById('toolbar-opacity-slider');
 //const toolbarOpacityContainer = document.getElementById('toolbar-opacity-container');
 const toolbarOpacityValue = document.getElementById('toolbar-opacity-value');
+// [추가] 되돌리기용 스택
+let undoStack = [];
+const MAX_UNDO = 20; // 최대 20개까지만 저장 (메모리 관리용)
 
 // 1. 캔버스 크기 초기화
 function resizeCanvas() {
@@ -54,12 +57,12 @@ toggleLockBtn.addEventListener('click', (e) => {
     isActive = !isActive;
     
     if (isActive) {
-        toggleLockBtn.innerText = "그리기 모드 (활성)";
+        toggleLockBtn.innerText = "🔓활성화";
         toggleLockBtn.style.background = "white";
         updateMouseIgnore(false); 
     } else {
-        toggleLockBtn.innerText = "마우스 모드 (비활성)";
-        toggleLockBtn.style.background = "#ffcccc";
+        toggleLockBtn.innerText = "🔒비활성";
+        toggleLockBtn.style.background = "#b4b4b4ff";
         drawing = false;
         updateMouseIgnore(true, true); 
     }
@@ -72,7 +75,7 @@ clearBtn?.addEventListener('click', (e) => {
 });
 
 // 5. 컬러 변경 (버튼 & 팔레트)
-const colors = ['red', 'blue', 'green', 'black'];
+const colors = ['white','yellow','red', 'blue',  'black'];
 colors.forEach(color => {
     document.getElementById(color)?.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -152,8 +155,20 @@ window.addEventListener('mousedown', (e) => {
     }
 });
 
+// [추가] 현재 상태 저장 함수
+function saveState() {
+    if (undoStack.length >= MAX_UNDO) {
+        undoStack.shift(); // 오래된 데이터 삭제
+    }
+    undoStack.push(canvas.toDataURL());
+}
+
 // 8. 마우스 뗌
 window.addEventListener('mouseup', () => {
+    if (drawing) {
+        saveState(); // [추가] 선 그리기가 끝나면 현재 상태 저장
+    }
+    
     isDragging = false; // 드래그 종료
     drawing = false;    // 그리기 종료
     
@@ -171,6 +186,38 @@ window.addEventListener('mouseup', () => {
     }
 });
 
+// 9. [핵심] Ctrl + Z 이벤트 리스너
+window.addEventListener('keydown', (e) => {
+    // Ctrl + Z (맥은 MetaKey) 감지
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault(); // 브라우저 기본 동작 방지
+        undo();
+    }
+});
+
+function undo() {
+    if (undoStack.length === 0) return;
+
+    // 현재 상태는 버리고 이전 상태를 꺼냄
+    undoStack.pop(); 
+    
+    // 캔버스를 깨끗이 지움
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (undoStack.length > 0) {
+        // 마지막 저장된 이미지 데이터 불러오기
+        let lastState = undoStack[undoStack.length - 1];
+        let img = new Image();
+        img.src = lastState;
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0);
+        };
+    }
+}
+document.getElementById('undo-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    undo();
+});
 //-----------------투명도 조절--------------------
 // 1. 버튼 클릭 시 모달 토글
 toolbarOpacityBtn.addEventListener('click', (e) => {

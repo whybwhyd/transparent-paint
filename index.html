@@ -141,7 +141,7 @@
 </head>
 <body>
     <div class="toolbar" id="toolbar">
-    <div id="red" class="color-btn" style="background: white;"></div>
+    <div id="white" class="color-btn" style="background: white;"></div>
     <div id="yellow" class="color-btn" style="background: yellow;"></div>
     <div id="red" class="color-btn" style="background: red;"></div>
     <div id="blue" class="color-btn" style="background: blue;"></div>
@@ -151,6 +151,8 @@
         <label for="color-picker">🎨</label>
         <input type="color" id="color-picker" value="#ff0000">
     </div>
+    <button id="undo-btn" class="clear-btn">↩️</button>
+
     <div class="toolbar-opacity-wrapper">
         <button id="toolbar-opacity-btn" class="clear-btn">💧투명도</button>
         <div id="toolbar-opacity-modal" class="opacity-modal hidden">
@@ -158,8 +160,8 @@
         <span id="toolbar-opacity-value">50%</span>
         </div>
     </div>
-    <button id="clear" class="clear-btn">전체 지우기</button>
-    <button id="toggle-lock">활성화</button>
+    <button id="clear" class="clear-btn">🗑️ 전체 지우기</button>
+    <button id="toggle-lock">🔓활성화</button>
     </div>
   
   <canvas id="canvas"></canvas>
