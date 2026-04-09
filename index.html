@@ -2,65 +2,162 @@
 <html>
 <head>
   <style>
-    body { margin: 0; overflow: hidden; background: transparent; }
-    
-    /* 캔버스가 화면 전체를 채우도록 설정 */
-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1;
-  /* border와 background-color는 지우거나 주석 처리하세요 */
-  /* border: 2px solid yellow; */
-  /* background-color: rgba(255, 0, 0, 0.1); */
-}
-    .toolbar {
-    z-index: 1000; /* 툴바는 무조건 캔버스보다 위 */
-    }
-    
-    /* 메뉴 바 스타일 */
-    .toolbar {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      display: flex;
-      gap: 10px;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.9); /* 가독성을 위해 불투명도 높임 */
-      border-radius: 8px;
-      z-index: 1000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      /* 기존 스타일 유지 */
-      pointer-events: auto; /* 명시적으로 포인터 이벤트 활성화 */
+    body { 
+    margin: 0; 
+    overflow: hidden; 
+    background: transparent; 
     }
 
-    .color-btn {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      border: 2px solid #ccc;
-      cursor: pointer;
+    /* 캔버스 설정 */
+    canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
     }
+
+    /* 툴바 (메뉴 바) 스타일 */
+    .toolbar {
+    position: fixed;
+    top: auto; 
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    background: white; /* RGBA 대신 완전한 흰색 */
+    border-radius: 12px;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4); /* 투명해질 때를 대비해 그림자 강화 */
+    display: flex;
+    flex-direction: row; /* 가로 방향 배치 */
+    align-items: center;    /* 요소들을 세로축 기준으로 중앙 정렬 (높낮이 맞춤) */
+    justify-content: center; /* 요소들을 가로축 기준으로 중앙 정렬 */
+    cursor: grab;
+    user-select: none;
+    pointer-events: auto;
+
+    /* [핵심 수정] 투명도 변경 시 부드럽게 애니메이션 적용 */
+    transition: opacity 0.2s ease;
     
-    .clear-btn {
-      padding: 5px 10px;
-      background: #333; /* 글자가 잘 보이게 어두운 배경 */
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
+    /* 초기 투명도 설정 (JS 슬라이더 초기값과 맞춤) */
+    opacity: 0.5; 
+    }
+
+    /* 드래그 중일 때의 커서 */
+    .toolbar:active {
+    cursor: grabbing;
+    }
+    /* 툴바 내부의 각 버튼과 래퍼들도 정렬 */
+    .toolbar > div, 
+    .toolbar > button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    }
+
+    /* 버튼 및 입력창에서는 기본 커서 유지 */
+    .toolbar button, 
+    .toolbar input {
+    cursor: pointer;
+    }
+    .toolbar-opacity-wrapper {
+    position: relative;
+    display: inline-block;
+    }
+    /* 컬러 버튼 스타일 */
+    .color-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #ddd;
+    transition: transform 0.1s;
+    }
+    .color-btn:hover {
+    transform: scale(1.1);
+    }
+
+    /* 컬러 피커 래퍼 (간격 조절) */
+    .color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    border-left: 1px solid #ddd;
+    margin-left: 5px;
+    }
+
+    #color-picker {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    }
+
+    /* 지우기/잠금 버튼 스타일 */
+    .clear-btn, #toggle-lock {
+    padding: 6px 12px;
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
     }
     .clear-btn:hover { background: #000; }
+
+    #toggle-lock {
+    background: #fff;
+    color: #333;
+    border: 1px solid #ccc;
+    }
+        /* 툴바 위에 뜨는 슬라이더 박스 */
+    .opacity-modal {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    z-index: 1001;
+    }
+
+    .opacity-modal.hidden {
+    display: none;
+    }
+
+    #toolbar-opacity-slider {
+    cursor: pointer;
+    width: 100px;
+    }
   </style>
 </head>
 <body>
     <div class="toolbar" id="toolbar">
+    <div id="red" class="color-btn" style="background: white;"></div>
+    <div id="yellow" class="color-btn" style="background: yellow;"></div>
     <div id="red" class="color-btn" style="background: red;"></div>
     <div id="blue" class="color-btn" style="background: blue;"></div>
-    <div id="green" class="color-btn" style="background: green;"></div>
     <div id="black" class="color-btn" style="background: black;"></div>
+
+    <div class="color-picker-wrapper">
+        <label for="color-picker">🎨</label>
+        <input type="color" id="color-picker" value="#ff0000">
+    </div>
+    <div class="toolbar-opacity-wrapper">
+        <button id="toolbar-opacity-btn" class="clear-btn">💧투명도</button>
+        <div id="toolbar-opacity-modal" class="opacity-modal hidden">
+        <input type="range" id="toolbar-opacity-slider" min="10" max="100" value="50">
+        <span id="toolbar-opacity-value">50%</span>
+        </div>
+    </div>
     <button id="clear" class="clear-btn">전체 지우기</button>
     <button id="toggle-lock">활성화</button>
     </div>

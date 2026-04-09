@@ -5,6 +5,12 @@ const ctx = canvas.getContext('2d');
 const toolbar = document.getElementById('toolbar');
 const toggleLockBtn = document.getElementById('toggle-lock');
 const clearBtn = document.getElementById('clear');
+const colorPicker = document.getElementById('color-picker');
+const toolbarOpacityBtn = document.getElementById('toolbar-opacity-btn');
+const toolbarOpacityModal = document.getElementById('toolbar-opacity-modal');
+const toolbarOpacitySlider = document.getElementById('toolbar-opacity-slider');
+//const toolbarOpacityContainer = document.getElementById('toolbar-opacity-container');
+const toolbarOpacityValue = document.getElementById('toolbar-opacity-value');
 
 // 1. 캔버스 크기 초기화
 function resizeCanvas() {
@@ -19,14 +25,18 @@ let currentColor = 'red';
 let isActive = true; // 기본값: 그리기 모드 활성화
 let lastIgnoreState = null;
 
-// [수정된 통합 제어 함수]
+// --- [추가] 툴바 드래그 변수 ---
+let isDragging = false;
+let offset = { x: 0, y: 0 };
+
+// [통합 제어 함수]
 function updateMouseIgnore(ignore, forward = false) {
     if (lastIgnoreState !== ignore) {
         ipcRenderer.send('set-ignore-mouse', ignore, forward ? { forward: true } : {});
         lastIgnoreState = ignore;
     }
 }
-// [전체 지우기 함수]
+
 function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
@@ -34,12 +44,11 @@ function clearCanvas() {
 // --- [이벤트 리스너 영역] ---
 
 // 2. ESC 키 감지 (전체 지우기)
-// [ESC 지우기 및 컬러 버튼 동일]
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (e.key === 'Escape') clearCanvas();
 });
 
-// 3. 활성/비활성화 버튼 (토글)
+// 3. 활성/비활성화 버튼
 toggleLockBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     isActive = !isActive;
@@ -47,15 +56,13 @@ toggleLockBtn.addEventListener('click', (e) => {
     if (isActive) {
         toggleLockBtn.innerText = "그리기 모드 (활성)";
         toggleLockBtn.style.background = "white";
-        // 활성화 시 즉시 클릭을 받을 수 있는 상태로 변경 시도
         updateMouseIgnore(false); 
     } else {
         toggleLockBtn.innerText = "마우스 모드 (비활성)";
         toggleLockBtn.style.background = "#ffcccc";
         drawing = false;
-        updateMouseIgnore(true, true); // 비활성화 즉시 투과
+        updateMouseIgnore(true, true); 
     }
-    console.log("현재 모드:", isActive ? "그리기 활성" : "마우스 투과");
 });
 
 // 4. 지우기 버튼 클릭
@@ -64,31 +71,48 @@ clearBtn?.addEventListener('click', (e) => {
     clearCanvas();
 });
 
-// 5. 컬러 변경 버튼들
+// 5. 컬러 변경 (버튼 & 팔레트)
 const colors = ['red', 'blue', 'green', 'black'];
 colors.forEach(color => {
     document.getElementById(color)?.addEventListener('click', (e) => {
         e.stopPropagation();
         if (isActive) {
             currentColor = color;
-            console.log("색상 변경:", currentColor);
+            colorPicker.value = (color === 'black') ? '#000000' : color;
         }
     });
 });
 
-// 6. 마우스 움직임 감지 (투과 제어 + 그리기)
-// [마우스 움직임 감지] - 이 부분이 핵심 수정 사항입니다.
+colorPicker.addEventListener('input', (e) => {
+    if (isActive) {
+        currentColor = e.target.value;
+    }
+});
+
+// 6. 마우스 움직임 감지 (드래그 + 투과 + 그리기 통합)
 window.addEventListener('mousemove', (e) => {
+    // [A] 툴바 드래그 중인 경우
+    if (isDragging) {
+        let newX = e.clientX - offset.x;
+        let newY = e.clientY - offset.y;
+        
+        // 화면 경계 제한
+        newX = Math.max(0, Math.min(window.innerWidth - toolbar.offsetWidth, newX));
+        newY = Math.max(0, Math.min(window.innerHeight - toolbar.offsetHeight, newY));
+
+        toolbar.style.left = `${newX}px`;
+        toolbar.style.top = `${newY}px`;
+        toolbar.style.bottom = 'auto';
+        toolbar.style.right = 'auto';
+        return; // 드래그 시 그리기 로직 건너뜀
+    }
+
+    // [B] 일반 모드 제어
     const isOverToolbar = toolbar.contains(e.target);
 
     if (!isActive) {
-        // [비활성화 모드] 툴바 아니면 100% 투과
         updateMouseIgnore(!isOverToolbar, true);
     } else {
-        // [활성화 모드] 
-        // 주석을 풀어도 그림이 그려지게 하려면, 
-        // 활성화 상태에서는 투과(true)를 하지 않고 마우스를 계속 잡고(false) 있어야 합니다.
-        // 그래야 mousedown 이벤트가 발생합니다.
         updateMouseIgnore(false); 
 
         if (drawing) {
@@ -101,33 +125,74 @@ window.addEventListener('mousemove', (e) => {
     }
 });
 
-// 7. 그리기 시작
+// 7. 마우스 누름 (그리기 시작 또는 드래그 시작)
 window.addEventListener('mousedown', (e) => {
-    if (!isActive) return;
-    if (!toolbar.contains(e.target)) {
+    const isOverToolbar = toolbar.contains(e.target);
+
+    // 툴바 드래그 로직 (버튼이나 입력창이 아닌 툴바 자체를 클릭했을 때)
+    if (isOverToolbar && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+        isDragging = true;
+        offset.x = e.clientX - toolbar.offsetLeft;
+        offset.y = e.clientY - toolbar.offsetTop;
+        return;
+    }
+
+    // 그리기 로직
+    if (isActive && !isOverToolbar) {
         drawing = true;
         ctx.beginPath();
         ctx.moveTo(e.clientX, e.clientY);
-        // 클릭하는 순간 다시 한번 확실히 마우스를 잡습니다.
         updateMouseIgnore(false);
     }
 });
 
-// 8. 그리기 종료
+// 8. 마우스 뗌
 window.addEventListener('mouseup', () => {
-    drawing = false;
+    isDragging = false; // 드래그 종료
+    drawing = false;    // 그리기 종료
     
     if (isActive) {
-        // 그리기 모드일 때는 마우스를 떼도 계속 마우스를 잡고 있어야 
-        // 다음 클릭(그리기 시작)을 인식할 수 있습니다.
         updateMouseIgnore(false);
     } else {
-        // 비활성화 모드일 때만 툴바 밖에서 투과시킵니다.
         if (!toolbar.matches(':hover')) {
             updateMouseIgnore(true, true);
         }
     }
 });
 
-// 시작 시 초기 설정: 버튼을 눌러야 하므로 처음엔 마우스를 잡습니다.
+//-----------------투명도 조절--------------------
+// 1. 버튼 클릭 시 모달 토글
+toolbarOpacityBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toolbarOpacityModal.classList.toggle('hidden');
+});
+
+// 2. 슬라이더나 모달 내부 클릭 시 닫히지 않게 방지
+toolbarOpacityModal.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+});
+
+// 3. 모달 외부 어디든 클릭하면 닫기
+window.addEventListener('mousedown', (e) => {
+    // 툴바 투명도 버튼 자체를 누를 때도 닫히는 현상을 막으려면 
+    // 클래스 존재 여부만 체크하는 것이 가장 깔끔합니다.
+    if (!toolbarOpacityModal.classList.contains('hidden')) {
+        toolbarOpacityModal.classList.add('hidden');
+    }
+});
+
+// 4. 투명도 조절 로직
+toolbarOpacitySlider.addEventListener('input', (e) => {
+    const val = e.target.value; 
+    const alpha = val / 100; 
+
+    // 툴바 전체 투명도 변경
+    toolbar.style.opacity = alpha;
+    
+    // [수정] 선언된 변수명에 맞춰 toolbarOpacityValueDisplay -> toolbarOpacityValue로 변경
+    if (toolbarOpacityValue) {
+        toolbarOpacityValue.innerText = `${val}%`;
+    }
+});
+// 초기 설정
 updateMouseIgnore(false);
