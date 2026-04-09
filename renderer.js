@@ -107,11 +107,17 @@ window.addEventListener('mousemove', (e) => {
         return; // 드래그 시 그리기 로직 건너뜀
     }
 
-    // [B] 일반 모드 제어
-    const isOverToolbar = toolbar.contains(e.target);
+   const isOverToolbar = toolbar.contains(e.target);
+    // [추가] 모달이 열려있는지 확인
+    const isModalOpen = !toolbarOpacityModal.classList.contains('hidden');
 
     if (!isActive) {
-        updateMouseIgnore(!isOverToolbar, true);
+        // [수정] 툴바 위거나 '모달이 열려있을 때'는 투과하지 않음(false)
+        if (isOverToolbar || isModalOpen) {
+            updateMouseIgnore(false);
+        } else {
+            updateMouseIgnore(true, true);
+        }
     } else {
         updateMouseIgnore(false); 
 
@@ -151,10 +157,15 @@ window.addEventListener('mouseup', () => {
     isDragging = false; // 드래그 종료
     drawing = false;    // 그리기 종료
     
+    const isModalOpen = !toolbarOpacityModal.classList.contains('hidden');
+
     if (isActive) {
         updateMouseIgnore(false);
     } else {
-        if (!toolbar.matches(':hover')) {
+        // [수정] 모달이 열려있다면 마우스를 떼도 투과하지 않고 기다림
+        if (isModalOpen || toolbar.matches(':hover')) {
+            updateMouseIgnore(false);
+        } else {
             updateMouseIgnore(true, true);
         }
     }
