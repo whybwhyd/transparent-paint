@@ -13,7 +13,7 @@
 
 | Platform | Download Link | Version |
 | :--- | :--- | :--- |
-| **Windows** | [**📥 Click to Download (.exe)**](https://github.com/whybwhyd/transparent-paint/releases/latest) | `v1.0.0` |
+| **Windows** | [**📥 Click to Download (.exe)**](https://github.com/whybwhyd/transparent-paint/releases/latest) | `v1.0.1` |
 
 ---
 
