@@ -7,3 +7,14 @@
 - **마우스 모드**: 투과 모드를 통해 바탕화면이나 다른 앱 클릭 가능
 - **ESC**: 화면 전체 지우기
 - **색상 변경**: Red, Blue, Green, Black 지원
+
+
+## 다운로드
+[![Download Now](https://img.shields.io/badge/Download-Latest_Release-blue?style=for-the-badge&logo=windows)](https://github.com/whybwhyd/transparent-paint/releases/latest)
+
+---
+
+## 📥 설치 방법
+1. 위 **Download** 버튼을 클릭하여 최신 버전 페이지로 이동합니다.
+2. `transparent-paint-1.0.0-Setup.exe` 파일을 다운로드합니다.
+3. 파일을 실행하여 설치를 완료합니다.
