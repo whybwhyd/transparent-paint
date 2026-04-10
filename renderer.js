@@ -15,6 +15,7 @@ const toolbarOpacityValue = document.getElementById('toolbar-opacity-value');
 let undoStack = [];
 const MAX_UNDO = 20; // 최대 20개까지만 저장 (메모리 관리용)
 
+
 // 1. 캔버스 크기 초기화
 function resizeCanvas() {
     canvas.width = window.innerWidth;
@@ -24,9 +25,12 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 let drawing = false;
-let currentColor = 'red';
+let currentColor = '#ff0000';
 let isActive = true; // 기본값: 그리기 모드 활성화
 let lastIgnoreState = null;
+//[추가] 지우개 변수
+let isEraserMode = false; // [추가] 지우개 모드 여부
+
 
 // --- [추가] 툴바 드래그 변수 ---
 let isDragging = false;
@@ -74,21 +78,46 @@ clearBtn?.addEventListener('click', (e) => {
     clearCanvas();
 });
 
-// 5. 컬러 변경 (버튼 & 팔레트)
-const colors = ['white','yellow','red', 'blue',  'black'];
-colors.forEach(color => {
-    document.getElementById(color)?.addEventListener('click', (e) => {
+function updateCursor() {
+    if (isEraserMode) {
+        document.body.classList.add('eraser-active');
+    } else {
+        document.body.classList.remove('eraser-active');
+    }
+}
+
+// 1. 색상 이름 대신 Hex 코드로 배열 정의
+const colorPalette = [
+    { name: 'white',  hex: '#ffffff' },
+    { name: 'yellow', hex: '#ffff00' },
+    { name: 'red',    hex: '#ff0000' },
+    { name: 'blue',   hex: '#0000ff' },
+    { name: 'black',  hex: '#000000' }
+];
+
+// 5. 컬러 변경 로직 (수정)
+colorPalette.forEach(colorObj => {
+    const btn = document.getElementById(colorObj.name);
+    btn?.addEventListener('click', (e) => {
         e.stopPropagation();
         if (isActive) {
-            currentColor = color;
-            colorPicker.value = (color === 'black') ? '#000000' : color;
+            isEraserMode = false; // 색상 클릭 시 지우개 해제
+            currentColor = colorObj.hex; // 그리기 색상을 hex로 변경
+            colorPicker.value = colorObj.hex; // 피커 값도 hex로 동기화
+            
+            // 지우개 버튼 스타일 초기화
+            document.getElementById('eraser').style.background = "#eee";
+
+            updateCursor(); // [추가] 커서를 기본으로 변경
         }
     });
 });
 
 colorPicker.addEventListener('input', (e) => {
     if (isActive) {
+        isEraserMode = false; // 팔레트 사용 시 지우개 해제
         currentColor = e.target.value;
+        document.getElementById('eraser').style.background = "#eee";
     }
 });
 
@@ -124,9 +153,18 @@ window.addEventListener('mousemove', (e) => {
     } else {
         updateMouseIgnore(false); 
 
-        if (drawing) {
-            ctx.lineWidth = 5;
+    if (drawing) {
+            // [핵심] 지우개 모드 설정 적용
+            if (isEraserMode) {
+                ctx.globalCompositeOperation = 'destination-out'; // 지우기 모드
+                ctx.lineWidth = 20; // 지우개는 좀 더 두껍게
+            } else {
+                ctx.globalCompositeOperation = 'source-over'; // 일반 그리기 모드
+                ctx.lineWidth = 5;
+            }
+
             ctx.lineCap = 'round';
+            ctx.lineJoin = 'round'; // 꺾임 부드럽게
             ctx.strokeStyle = currentColor;
             ctx.lineTo(e.clientX, e.clientY);
             ctx.stroke();
@@ -168,7 +206,9 @@ window.addEventListener('mouseup', () => {
     if (drawing) {
         saveState(); // [추가] 선 그리기가 끝나면 현재 상태 저장
     }
-    
+    // 그리기 종료 시 설정을 기본으로 돌려놓는 것이 안전합니다.
+    ctx.globalCompositeOperation = 'source-over';
+
     isDragging = false; // 드래그 종료
     drawing = false;    // 그리기 종료
     
@@ -200,7 +240,11 @@ function undo() {
 
     // 현재 상태는 버리고 이전 상태를 꺼냄
     undoStack.pop(); 
-    
+
+    // [추가] 그리기 모드를 일시적으로 기본으로 변경하여 이미지가 정상적으로 그려지도록 함
+    const prevComposite = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'source-over';
+
     // 캔버스를 깨끗이 지움
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -211,6 +255,8 @@ function undo() {
         img.src = lastState;
         img.onload = () => {
             ctx.drawImage(img, 0, 0);
+            // 원래 모드로 복구
+            ctx.globalCompositeOperation = prevComposite;
         };
     }
 }
@@ -252,5 +298,19 @@ toolbarOpacitySlider.addEventListener('input', (e) => {
         toolbarOpacityValue.innerText = `${val}%`;
     }
 });
+
+// [추가] 지우개 버튼 이벤트
+document.getElementById('eraser')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isActive) {
+        isEraserMode = !isEraserMode; // 토글
+        if (isEraserMode) {
+            e.target.style.background = "#999"; // 활성화 표시
+        } else {
+            e.target.style.background = "#eee";
+        }
+    }
+});
+
 // 초기 설정
 updateMouseIgnore(false);
