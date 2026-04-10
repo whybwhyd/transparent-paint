@@ -9,12 +9,15 @@
 - **색상 변경**: Red, Blue, Green, Black 지원
 
 
-## 다운로드
-[![Download Now](https://img.shields.io/badge/Download-Latest_Release-blue?style=for-the-badge&logo=windows)](https://github.com/whybwhyd/transparent-paint/releases/latest)
+## 🎁 Download & Install
+
+| Platform | Download Link | Version |
+| :--- | :--- | :--- |
+| **Windows** | [**📥 Click to Download (.exe)**](https://github.com/whybwhyd/transparent-paint/releases/latest) | `v1.0.0` |
 
 ---
 
 ## 📥 설치 방법
-1. 위 **Download** 버튼을 클릭하여 최신 버전 페이지로 이동합니다.
+1. 위 **Download Link**를 클릭하여 최신 버전 페이지로 이동합니다.
 2. `transparent-paint-1.0.0-Setup.exe` 파일을 다운로드합니다.
 3. 파일을 실행하여 설치를 완료합니다.
