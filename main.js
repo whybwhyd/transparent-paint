@@ -28,3 +28,9 @@ ipcMain.on('set-ignore-mouse', (event, ignore, options) => {
 }
 
 app.whenReady().then(createWindow);
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
