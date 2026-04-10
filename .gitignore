@@ -1,4 +1,15 @@
-node_modules/
+# 빌드 결과물 (용량이 크고 매번 바뀜)
+out/
 dist/
+
+# 의존성 폴더
+node_modules/
+
+# OS 및 에디터 관련
 .DS_Store
-*.log
+.vscode/
+
+# 보안/비밀 정보 (코드 서명 인증서 등)
+*.p12
+*.pfx
+.env
