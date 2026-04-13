@@ -22,8 +22,8 @@ const ROOM_ID = 'test-room-1'; // 테스트용 방 아이디
 let undoStack = [];
 
 // [추가] 로그를 찍어서 확인해봅시다.
-console.log("윈도우 객체 확인:", window.socketIO);
-console.log("생성된 소켓 확인:", socket);
+//console.log("윈도우 객체 확인:", window.socketIO);
+//console.log("생성된 소켓 확인:", socket);
 
 // 서버 연결 시 방 입장 알림
 window.socketIO.on('connect', () => {
