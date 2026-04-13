@@ -1,15 +1,19 @@
-# 빌드 결과물 (용량이 크고 매번 바뀜)
-out/
-dist/
+# 의존성 폴더 (각 하위 폴더의 node_modules 모두 제외)
+**/node_modules/
 
-# 의존성 폴더
-node_modules/
+# 빌드 결과물 (client 폴더 내의 out, dist 제외)
+client/out/
+client/dist/
 
 # OS 및 에디터 관련
 .DS_Store
 .vscode/
+Thumbs.db
 
 # 보안/비밀 정보 (코드 서명 인증서 등)
 *.p12
 *.pfx
 .env
+
+# 로그 파일
+*.log
