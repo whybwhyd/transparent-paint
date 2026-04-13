@@ -1,4 +1,5 @@
-const { ipcRenderer } = require('electron');
+// const { ipcRenderer } = require('electron');
+// const { io } = require("socket.io-client");
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -11,10 +12,23 @@ const toolbarOpacityModal = document.getElementById('toolbar-opacity-modal');
 const toolbarOpacitySlider = document.getElementById('toolbar-opacity-slider');
 //const toolbarOpacityContainer = document.getElementById('toolbar-opacity-container');
 const toolbarOpacityValue = document.getElementById('toolbar-opacity-value');
+const MAX_UNDO = 20; // 최대 20개까지만 저장 (메모리 관리용)
+const serverUrl = window.env?.SERVER_URL || "http://localhost:3000";
+const socket = window.socketIO ? window.socketIO.connect(serverUrl) : null;
+// 기존 socket 선언부 근처에 추가
+const ROOM_ID = 'test-room-1'; // 테스트용 방 아이디
+
 // [추가] 되돌리기용 스택
 let undoStack = [];
-const MAX_UNDO = 20; // 최대 20개까지만 저장 (메모리 관리용)
 
+// [추가] 로그를 찍어서 확인해봅시다.
+console.log("윈도우 객체 확인:", window.socketIO);
+console.log("생성된 소켓 확인:", socket);
+
+// 서버 연결 시 방 입장 알림
+window.socketIO.on('connect', () => {
+    window.socketIO.emit('join-room', ROOM_ID);
+});
 
 // 1. 캔버스 크기 초기화
 function resizeCanvas() {
@@ -39,7 +53,8 @@ let offset = { x: 0, y: 0 };
 // [통합 제어 함수]
 function updateMouseIgnore(ignore, forward = false) {
     if (lastIgnoreState !== ignore) {
-        ipcRenderer.send('set-ignore-mouse', ignore, forward ? { forward: true } : {});
+        // window.electronAPI.sendIgnoreMouse('set-ignore-mouse', ignore, forward ? { forward: true } : {});
+        window.electronAPI.sendIgnoreMouse(ignore, forward ? { forward: true } : {});
         lastIgnoreState = ignore;
     }
 }
@@ -166,8 +181,34 @@ window.addEventListener('mousemove', (e) => {
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round'; // 꺾임 부드럽게
             ctx.strokeStyle = currentColor;
+            if (drawing && isActive) {
+                let lastTime = 0;
+                const now = Date.now();
+                if (now - lastTime > 30) { // 30ms마다 한 번만 전송 (약 초당 33번)
+                    window.socketIO.emit('draw-data', {
+                        roomId: ROOM_ID,
+                        x: e.clientX,
+                        y: e.clientY,
+                        color: currentColor,
+                        isEraser: isEraserMode,
+                        type: 'draw'
+                    });
+                    lastTime = now;
+                }
+            }
             ctx.lineTo(e.clientX, e.clientY);
             ctx.stroke();
+
+            // [추가] 서버로 현재 그리는 좌표 전송
+            window.socketIO.emit('draw-data', {
+                roomId: ROOM_ID,
+                x: e.clientX,
+                y: e.clientY,
+                color: currentColor,
+                isEraser: isEraserMode,
+                type: 'draw'
+            });
+
         }
     }
 });
@@ -190,6 +231,17 @@ window.addEventListener('mousedown', (e) => {
         ctx.beginPath();
         ctx.moveTo(e.clientX, e.clientY);
         updateMouseIgnore(false);
+
+        // [추가] 서버에 시작 좌표 전송
+        window.socketIO.emit('draw-data', {
+            roomId: ROOM_ID,
+            x: e.clientX,
+            y: e.clientY,
+            color: currentColor,
+            isEraser: isEraserMode,
+            type: 'start'
+        });
+
     }
 });
 
@@ -314,3 +366,37 @@ document.getElementById('eraser')?.addEventListener('click', (e) => {
 
 // 초기 설정
 updateMouseIgnore(false);
+
+// [추가] 다른 사람이 보내는 그림 데이터 수신 및 렌더링
+window.socketIO.on('render-draw', (data) => {
+    // 내 설정을 잠시 저장
+    const prevComposite = ctx.globalCompositeOperation;
+    const prevLineWidth = ctx.lineWidth;
+    const prevStrokeStyle = ctx.strokeStyle;
+
+    // 상대방의 설정(지우개 여부 등)을 적용
+    if (data.isEraser) {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = 20;
+    } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = data.color;
+    }
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (data.type === 'start') {
+        ctx.beginPath();
+        ctx.moveTo(data.x, data.y);
+    } else {
+        ctx.lineTo(data.x, data.y);
+        ctx.stroke();
+    }
+
+    // 내 원래 설정으로 복구
+    ctx.globalCompositeOperation = prevComposite;
+    ctx.lineWidth = prevLineWidth;
+    ctx.strokeStyle = prevStrokeStyle;
+});

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socket.io Test Client</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #222; }
+        canvas { display: block; background: #fff; }
+        #info { position: fixed; top: 10; left: 10; background: rgba(0,0,0,0.7); color: white; padding: 10px; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="info">접속 상태 확인 중...</div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const info = document.getElementById('info');
+        
+        // 캔버스 크기를 브라우저 창 크기에 맞춤 (혹은 아주 크게 3000 정도로 고정)
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const ROOM_ID = 'test-room-1';
+        const socket = io("http://localhost:3000");
+
+        socket.on('connect', () => {
+            info.innerText = "서버 연결됨! 방 입장 중...";
+            socket.emit('join-room', ROOM_ID);
+        });
+
+        socket.on('render-draw', (data) => {
+            // 데이터 수신 확인용 로그
+           // console.log("그리기 시도:", data.x, data.y);
+            info.innerText = `수신 중: x=${Math.floor(data.x)}, y=${Math.floor(data.y)}`;
+
+            ctx.lineWidth = data.isEraser ? 20 : 5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = data.color;
+            ctx.globalCompositeOperation = data.isEraser ? 'destination-out' : 'source-over';
+
+            if (data.type === 'start') {
+                ctx.beginPath();
+                ctx.moveTo(data.x, data.y);
+            } else {
+                ctx.lineTo(data.x, data.y);
+                ctx.stroke();
+            }
+        });
+    </script>
+</body>
+</html>

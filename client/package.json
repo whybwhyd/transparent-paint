@@ -15,5 +15,9 @@
     "@electron-forge/maker-zip": "^6.4.2",
     "electron": "^41.2.0",
     "nodemon": "^3.1.14"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "socket.io-client": "^4.8.3"
   }
 }
