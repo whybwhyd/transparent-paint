@@ -37,8 +37,8 @@ io.on('connection', (socket) => {
     });
 });
 
-// 3000번 포트에서 서버 실행
-const PORT = 3000;
-server.listen(PORT, () => {
-    console.log(`서버 http://localhost:${PORT} 시작!`);
+const PORT = process.env.PORT || 3000; // 서버 포트 또는 3000번
+
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
 });
